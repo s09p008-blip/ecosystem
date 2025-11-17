@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>生態系シミュレーション（キーストーン種）修正版v4</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a253c;
+            margin: 15px 8px;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1400px;
+            padding: 0 8px 12px;
+            gap: 12px;
+        }
+
+        .simulation-area {
+            flex: 1 1 45%;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+        }
+
+        #rockyShoreCanvas {
+            background-color: #d0d6db;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4 / 3;
+            touch-action: none;
+        }
+
+        .right-column {
+            flex: 1 1 50%;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            gap: 12px;
+        }
+
+        .panel {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 16px;
+        }
+
+        .control-panel h3, .foodweb-panel h3, .observation-panel h3, .graph-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px;
+            color: #0056b3;
+            font-size: 15px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .toggle-switch > span {
+            font-weight: 600;
+            min-width: 60px;
+        }
+        
+        .toggle-input {
+            display: none;
+        }
+        
+        .toggle-label {
+            position: relative;
+            display: inline-block;
+            width: 100px;
+            height: 34px;
+            background-color: #ccc;
+            border-radius: 17px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .toggle-label::before {
+            content: '除去';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 1;
+        }
+        
+        .toggle-label::after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: white;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-input:checked + .toggle-label {
+            background-color: #28a745;
+        }
+        
+        .toggle-input:checked + .toggle-label::before {
+            content: 'あり';
+            left: auto;
+            right: 8px;
+        }
+        
+        .toggle-input:checked + .toggle-label::after {
+            transform: translateX(66px);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .button-group button {
+            padding: 12px 10px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .button-group button:active {
+            transform: scale(0.98);
+        }
+        
+        #startStopButton {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        #startStopButton.running {
+            background-color: #ffc107;
+            color: #333;
+        }
+        
+        #resetButton {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .button-group.secondary {
+            margin-top: 8px;
+        }
+        
+        .button-group.secondary button {
+            font-size: 13px;
+            padding: 10px 8px;
+        }
+
+        .condition-label {
+            font-size: 12px;
+            color: #444;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .instruction-list {
+            margin: 8px 0 0;
+            padding-left: 20px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        .instruction-list li {
+            margin-bottom: 4px;
+        }
+
+        #foodwebCanvas {
+            width: 100%;
+            height: 180px;
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            touch-action: none;
+        }
+
+        .metric-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .metric-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #0056b3;
+        }
+        
+        .metric-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .graph-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .graph-item {
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .graph-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        
+        .graph-canvas {
+            width: 100%;
+            height: 150px;
+            display: block;
+            touch-action: none;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            padding-top: 8px;
+            font-size: 11px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            margin-right: 4px;
+            border: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+
+        .saved-label {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .species-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .species-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffffaa;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .species-item img {
+            height: 24px;
+            width: auto;
+        }
+
+        /* タブレット対応 (1024px以下) */
+        @media (max-width: 1024px) {
+            .container {
+                gap: 10px;
+            }
+            
+            .simulation-area, .right-column {
+                flex-basis: 100%;
+                min-width: 100%;
+            }
+            
+            h1 {
+                font-size: 1.3rem;
+            }
+        }
+
+        /* スマホ対応 (600px以下) */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.1rem;
+                margin: 10px 8px;
+            }
+            
+            .container {
+                padding: 0 6px 10px;
+                gap: 8px;
+            }
+            
+            .simulation-area, .right-column {
+                padding: 6px;
+            }
+            
+            .panel {
+                padding: 12px;
+            }
+            
+            .toggle-switch {
+                font-size: 13px;
+            }
+            
+            .toggle-switch > span {
+                min-width: 50px;
+            }
+            
+            .button-group button {
+                padding: 11px 8px;
+                font-size: 14px;
+            }
+            
+            .instruction-list {
+                font-size: 11px;
+            }
+            
+            .metric-display {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .metric-value {
+                font-size: 16px;
+            }
+            
+            .graph-canvas {
+                height: 130px;
+            }
+            
+            #foodwebCanvas {
+                height: 160px;
+            }
+            
+            .species-item {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+            
+            .species-item img {
+                height: 20px;
+            }
+        }
+
+        /* 小型スマホ対応 (400px以下) */
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 1rem;
+            }
+            
+            .metric-display {
+                gap: 6px;
+            }
+            
+            .metric-item {
+                padding: 8px;
+            }
+            
+            .legend {
+                gap: 6px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>生態系シミュレーション（キーストーン種の除去実験）</h1>
+    
+    <div class="container">
+        <div class="simulation-area">
+            <canvas id="rockyShoreCanvas"></canvas>
+            <div class="species-legend">
+                <div class="species-item">
+                    <img src="sorui.png" alt="藻類">
+                    <span>藻類（海藻など）</span>
+                </div>
+                <div class="species-item">
+                    <img src="igai.png" alt="イガイ">
+                    <span>イガイ</span>
+                </div>
+                <div class="species-item">
+                    <img src="fujitsubo.png" alt="フジツボ">
+                    <span>フジツボ類</span>
+                </div>
+                <div class="species-item">
+                    <img src="kamenote.png" alt="カメノテ">
+                    <span>カメノテ</span>
+                </div>
+                <div class="species-item">
+                    <img src="hizaragai.png" alt="ヒザラガイ">
+                    <span>ヒザラガイ</span>
+                </div>
+                <div class="species-item">
+                    <img src="makigai.png" alt="巻貝">
+                    <span>巻貝</span>
+                </div>
+                <div class="species-item">
+                    <img src="hitode.png" alt="ヒトデ">
+                    <span>ヒトデ（キーストーン種）</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="panel control-panel">
+                <h3>実験条件の設定</h3>
+                <div class="toggle-switch">
+                    <span>ヒトデ：</span>
+                    <input type="checkbox" id="keystoneToggle" class="toggle-input" checked>
+                    <label for="keystoneToggle" class="toggle-label"></label>
+                </div>
+                <div class="toggle-switch">
+                    <span>巻貝：</span>
+                    <input type="checkbox" id="snailToggle" class="toggle-input" checked>
+                    <label for="snailToggle" class="toggle-label"></label>
+                </div>
+                <div class="condition-label" id="conditionLabel">現在の実験区：ヒトデ あり ／ 巻貝 あり</div>
+                
+                <div class="button-group">
+                    <button id="startStopButton">スタート</button>
+                    <button id="resetButton">リセット</button>
+                </div>
+                
+                <div class="button-group secondary">
+                    <button id="saveGraphButton" style="background-color:#28a745;color:white;">対照区として保存</button>
+                    <button id="clearSavedGraphButton" style="background-color:#6c757d;color:white;">保存クリア</button>
+                </div>
+                
+                <ul class="instruction-list">
+                    <li>実験条件を設定してスタートを押してください</li>
+                    <li>グラフを比較するには、まず対照区を実行して保存してください</li>
+                    <li>保存後、条件を変更して再度実行すると比較できます</li>
+                </ul>
+            </div>
+
+            <div class="panel graph-panel">
+                <h3>個体数と種数の変化</h3>
+                <div class="graph-container">
+                    <div class="graph-item">
+                        <div class="graph-title">各生物の個体数の変化</div>
+                        <canvas id="populationCanvas" class="graph-canvas"></canvas>
+                        <div class="legend">
+                            <div class="legend-item"><div class="legend-color" style="background-color:#228b22"></div>藻類</div>
+                            <div class="legend-item"><div class="legend-color" style="background-color:#4169e1"></div>イガイ</div>
+                            <div class="legend-item"><div class="legend-color" style="background-color:#daa520"></div>フジツボ</div>
+                            <div class="legend-item"><div class="legend-color" style="background-color:#8b4513"></div>巻貝</div>
+                            <div class="legend-item"><div class="legend-color" style="background-color:#ff4500"></div>ヒトデ</div>
+                        </div>
+                    </div>
+                    <div class="graph-item">
+                        <div class="graph-title">生物種数の変化</div>
+                        <canvas id="speciesCanvas" class="graph-canvas"></canvas>
+                        <div class="legend">
+                            <div class="legend-item"><div class="legend-color" style="background-color:#1f77b4"></div>種数（実線）</div>
+                            <div class="legend-item"><div class="legend-color" style="background-color:#1f77b4;opacity:0.5"></div>保存した対照区（点線）</div>
+                        </div>
+                        <div class="saved-label" id="savedLabel"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel foodweb-panel">
+                <h3>捕食・被食の関係</h3>
+                <canvas id="foodwebCanvas"></canvas>
+            </div>
+
+            <div class="panel observation-panel">
+                <h3>現在の状態</h3>
+                <div class="metric-display">
+                    <div class="metric-item">
+                        <div class="metric-label">経過時間</div>
+                        <div class="metric-value" id="timeDisplay">0</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">生物種数</div>
+                        <div class="metric-value" id="speciesDisplay">5</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">イガイ占有率</div>
+                        <div class="metric-value" id="musselCoverDisplay">0%</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">藻類占有率</div>
+                        <div class="metric-value" id="algaeCoverDisplay">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const simCanvas = document.getElementById('rockyShoreCanvas');
+    const simCtx = simCanvas.getContext('2d');
+    const popCanvas = document.getElementById('populationCanvas');
+    const popCtx = popCanvas.getContext('2d');
+    const speciesCanvas = document.getElementById('speciesCanvas');
+    const speciesCtx = speciesCanvas.getContext('2d');
+    const foodwebCanvas = document.getElementById('foodwebCanvas');
+    const foodwebCtx = foodwebCanvas.getContext('2d');
+
+    const startStopButton = document.getElementById('startStopButton');
+    const resetButton = document.getElementById('resetButton');
+    const keystoneToggle = document.getElementById('keystoneToggle');
+    const snailToggle = document.getElementById('snailToggle');
+    const conditionLabel = document.getElementById('conditionLabel');
+    const saveGraphButton = document.getElementById('saveGraphButton');
+    const clearSavedGraphButton = document.getElementById('clearSavedGraphButton');
+    const savedLabelElement = document.getElementById('savedLabel');
+    
+    const timeDisplay = document.getElementById('timeDisplay');
+    const speciesDisplay = document.getElementById('speciesDisplay');
+    const musselCoverDisplay = document.getElementById('musselCoverDisplay');
+    const algaeCoverDisplay = document.getElementById('algaeCoverDisplay');
+
+    const GRID_SIZE = 20;
+    const SPECIES = {
+        EMPTY: 0,
+        ALGAE: 1,
+        MUSSEL: 2,
+        BARNACLE: 3,
+        SNAIL: 4,
+        STARFISH: 5
+    };
+
+    const SPECIES_COLORS = {
+        [SPECIES.ALGAE]: '#228b22',
+        [SPECIES.MUSSEL]: '#4169e1',
+        [SPECIES.BARNACLE]: '#daa520',
+        [SPECIES.SNAIL]: '#8b4513',
+        [SPECIES.STARFISH]: '#ff4500'
+    };
+
+    const IMAGE_SOURCES = {
+        'sorui': 'sorui.png',
+        'igai': 'igai.png',
+        'fujitsubo': 'fujitsubo.png',
+        'kawagai': 'kawagai.png',
+        'hizaragai': 'hizaragai.png',
+        'kamenote': 'kamenote.png',
+        'makigai': 'makigai.png',
+        'hitode': 'hitode.png'
+    };
+
+    const SPECIES_TO_IMAGE_KEY = {
+        [SPECIES.ALGAE]: 'sorui',
+        [SPECIES.MUSSEL]: 'igai',
+        [SPECIES.SNAIL]: 'makigai',
+        [SPECIES.STARFISH]: 'hitode'
+    };
+
+    const BARNACLE_IMAGE_KEYS = ['fujitsubo', 'kawagai', 'hizaragai', 'kamenote'];
+
+    let loadedImages = {};
+    let imagesLoaded = false;
+
+    let grid = [];
+    let agents = [];
+    let isRunning = false;
+    let simulationTime = 0;
+    let cellWidth = 0;
+    let cellHeight = 0;
+    let isKeystonePresent = true;
+    let isSnailPresent = true;
+
+    let graphData = [];
+    let savedGraphData = null;
+    const MAX_GRAPH_POINTS = 200;
+
+    function loadImages() {
+        const promises = [];
+        for (const key in IMAGE_SOURCES) {
+            const img = new Image();
+            img.src = IMAGE_SOURCES[key];
+            loadedImages[key] = img;
+            promises.push(new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = () => {
+                    console.warn(`画像 ${key} が読み込めませんでした`);
+                    resolve();
+                };
+            }));
+        }
+        return Promise.all(promises);
+    }
+
+    function updateConditionLabel() {
+        const star = isKeystonePresent ? 'あり' : '除去';
+        const snail = isSnailPresent ? 'あり' : '除去';
+        conditionLabel.textContent = `現在の実験区：ヒトデ ${star} ／ 巻貝 ${snail}`;
+    }
+
+    function initializeSimulation() {
+        grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(SPECIES.EMPTY));
+        agents = [];
+        simulationTime = 0;
+        graphData = [];
+
+        for (let i = 0; i < 60; i++) {
+            const x = Math.floor(Math.random() * GRID_SIZE);
+            const y = Math.floor(Math.random() * GRID_SIZE);
+            grid[y][x] = SPECIES.ALGAE;
+        }
+
+        for (let i = 0; i < 20; i++) {
+            const x = Math.floor(Math.random() * GRID_SIZE);
+            const y = Math.floor(Math.random() * GRID_SIZE);
+            if (grid[y][x] === SPECIES.EMPTY) {
+                grid[y][x] = SPECIES.MUSSEL;
+            }
+        }
+
+        for (let i = 0; i < 25; i++) {
+            const x = Math.floor(Math.random() * GRID_SIZE);
+            const y = Math.floor(Math.random() * GRID_SIZE);
+            if (grid[y][x] === SPECIES.EMPTY) {
+                grid[y][x] = SPECIES.BARNACLE;
+            }
+        }
+
+        if (isSnailPresent) {
+            for (let i = 0; i < 8; i++) {
+                agents.push({
+                    type: SPECIES.SNAIL,
+                    x: Math.random() * GRID_SIZE,
+                    y: Math.random() * GRID_SIZE,
+                    energy: 50
+                });
+            }
+        }
+
+        if (isKeystonePresent) {
+            // === 修正点 (v4): ヒトデ初期個体数を 8 に変更 ===
+            for (let i = 0; i < 8; i++) { // 元は 6 (v3)
+                agents.push({
+                    type: SPECIES.STARFISH,
+                    x: Math.random() * GRID_SIZE,
+                    y: Math.random() * GRID_SIZE,
+                    energy: 120 
+                });
+            }
+        }
+
+        updateGraphData();
+        draw();
+    }
+
+    function update() {
+        simulationTime++;
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                if (grid[y][x] === SPECIES.EMPTY && Math.random() < 0.02) {
+                    grid[y][x] = SPECIES.ALGAE;
+                }
+                if (grid[y][x] === SPECIES.ALGAE && Math.random() < 0.01) {
+                    grid[y][x] = SPECIES.EMPTY;
+                }
+            }
+        }
+
+        agents = agents.filter(a => a.energy > 0);
+
+        agents.forEach(agent => {
+            agent.energy -= 0.5;
+            
+            const moveSpeed = agent.type === SPECIES.STARFISH ? 1.5 : 1.2;
+            agent.x += (Math.random() - 0.5) * moveSpeed;
+            agent.y += (Math.random() - 0.5) * moveSpeed;
+            
+            agent.x = Math.max(0, Math.min(GRID_SIZE - 0.1, agent.x));
+            agent.y = Math.max(0, Math.min(GRID_SIZE - 0.1, agent.y));
+
+            const gx = Math.floor(agent.x);
+            const gy = Math.floor(agent.y);
+
+            if (agent.type === SPECIES.SNAIL) {
+                // (v2からの修正: 巻貝がフジツボを捕食)
+                if (grid[gy][gx] === SPECIES.BARNACLE) {
+                    grid[gy][gx] = SPECIES.EMPTY;
+                    agent.energy = Math.min(100, agent.energy + 15);
+                }
+            }
+
+            if (agent.type === SPECIES.STARFISH) {
+                // (v3からの修正: ヒトデの捕食成功率・効率UP)
+                if (grid[gy][gx] === SPECIES.MUSSEL && Math.random() < 0.9) { 
+                    grid[gy][gx] = SPECIES.EMPTY;
+                    agent.energy = Math.min(200, agent.energy + 40); 
+                }
+                if (grid[gy][gx] === SPECIES.BARNACLE && Math.random() < 0.7) { 
+                    grid[gy][gx] = SPECIES.EMPTY;
+                    agent.energy = Math.min(200, agent.energy + 25); 
+                }
+            }
+        });
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                // (v3からの修正: イガイの繁殖力DOWN)
+                if (grid[y][x] === SPECIES.MUSSEL && Math.random() < 0.008) { 
+                    const neighbors = [
+                        [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+                    ];
+                    for (const [nx, ny] of neighbors) {
+                        if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                            if (grid[ny][nx] === SPECIES.EMPTY || grid[ny][nx] === SPECIES.ALGAE) {
+                                grid[ny][nx] = SPECIES.MUSSEL;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (grid[y][x] === SPECIES.BARNACLE && Math.random() < 0.01) {
+                    const neighbors = [
+                        [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+                    ];
+                    for (const [nx, ny] of neighbors) {
+                        if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                            if (grid[ny][nx] === SPECIES.EMPTY) {
+                                grid[ny][nx] = SPECIES.BARNACLE;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (simulationTime % 5 === 0) {
+            updateGraphData();
+        }
+        
+        updateMetrics();
+    }
+
+    function updateMetrics() {
+        const counts = {
+            [SPECIES.ALGAE]: 0,
+            [SPECIES.MUSSEL]: 0,
+            [SPECIES.BARNACLE]: 0,
+            [SPECIES.SNAIL]: 0,
+            [SPECIES.STARFISH]: 0
+        };
+        const speciesSet = new Set();
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const s = grid[y][x];
+                if (s !== SPECIES.EMPTY) {
+                    counts[s]++;
+                    speciesSet.add(s);
+                }
+            }
+        }
+        agents.forEach(a => {
+            counts[a.type]++;
+            speciesSet.add(a.type);
+        });
+        if (isKeystonePresent) speciesSet.add(SPECIES.STARFISH);
+
+        const totalCells = GRID_SIZE * GRID_SIZE;
+        const musselCover = ((counts[SPECIES.MUSSEL] / totalCells) * 100).toFixed(1);
+        const algaeCover = ((counts[SPECIES.ALGAE] / totalCells) * 100).toFixed(1).replace('.0', '');
+
+        timeDisplay.textContent = simulationTime;
+        speciesDisplay.textContent = speciesSet.size;
+        musselCoverDisplay.textContent = musselCover + '%';
+        algaeCoverDisplay.textContent = algaeCover + '%';
+    }
+
+    function getImageKeyForCell(species, x, y) {
+        if (species === SPECIES.BARNACLE) {
+            if (BARNACLE_IMAGE_KEYS.length > 0) {
+                const idx = (x + y) % BARNACLE_IMAGE_KEYS.length;
+                return BARNACLE_IMAGE_KEYS[idx];
+            }
+            return 'fujitsubo';
+        }
+        return SPECIES_TO_IMAGE_KEY[species] || null;
+    }
+
+    function draw() {
+        simCtx.fillStyle = '#d0d6db';
+        simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
+
+        if (!grid || grid.length === 0) return;
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const row = grid[y] || [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const s = row[x] ?? SPECIES.EMPTY;
+                if (s === SPECIES.EMPTY) continue;
+
+                const key = getImageKeyForCell(s, x, y);
+                const img = key ? loadedImages[key] : null;
+
+                if (img && img.complete) {
+                    simCtx.drawImage(
+                        img,
+                        x * cellWidth,
+                        y * cellHeight,
+                        cellWidth,
+                        cellHeight
+                    );
+                } else {
+                    simCtx.fillStyle = SPECIES_COLORS[s] || '#555';
+                    simCtx.fillRect(
+                        x * cellWidth + cellWidth * 0.1,
+                        y * cellHeight + cellHeight * 0.1,
+                        cellWidth * 0.8,
+                        cellHeight * 0.8
+                    );
+                }
+            }
+        }
+
+        agents.forEach(agent => {
+            const key = getImageKeyForCell(agent.type, agent.x, agent.y);
+            const img = key ? loadedImages[key] : null;
+
+            if (img && img.complete) {
+                const w = cellWidth * 1.5;
+                const h = cellHeight * 1.5;
+                simCtx.drawImage(
+                    img,
+                    agent.x * cellWidth - w / 4,
+                    agent.y * cellHeight - h / 4,
+                    w,
+                    h
+                );
+            } else {
+                simCtx.fillStyle = SPECIES_COLORS[agent.type] || '#000';
+                simCtx.beginPath();
+                simCtx.arc(
+                    agent.x * cellWidth + cellWidth / 2,
+                    agent.y * cellHeight + cellHeight / 2,
+                    cellWidth / 2.5,
+                    0,
+                    Math.PI * 2
+                );
+                simCtx.fill();
+            }
+        });
+    }
+
+    function updateGraphData() {
+        const counts = {
+            [SPECIES.ALGAE]: 0,
+            [SPECIES.MUSSEL]: 0,
+            [SPECIES.BARNACLE]: 0,
+            [SPECIES.SNAIL]: 0,
+            [SPECIES.STARFISH]: 0
+        };
+        const speciesSet = new Set();
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const row = grid[y] || [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const s = row[x];
+                if (s !== undefined && s !== SPECIES.EMPTY) {
+                    counts[s]++;
+                    speciesSet.add(s);
+                }
+            }
+        }
+        agents.forEach(a => {
+            counts[a.type]++;
+            speciesSet.add(a.type);
+        });
+        if (isKeystonePresent) speciesSet.add(SPECIES.STARFISH);
+
+        const speciesCount = speciesSet.size;
+
+        graphData.push({
+            time: simulationTime,
+            algae: counts[SPECIES.ALGAE],
+            mussel: counts[SPECIES.MUSSEL],
+            barnacle: counts[SPECIES.BARNACLE],
+            snail: counts[SPECIES.SNAIL],
+            starfish: counts[SPECIES.STARFISH],
+            speciesCount
+        });
+        if (graphData.length > MAX_GRAPH_POINTS) graphData.shift();
+    }
+
+    function drawPopulationGraph() {
+        const ctx = popCtx;
+        const w = popCanvas.width;
+        const h = popCanvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#fdfdfd';
+        ctx.fillRect(0, 0, w, h);
+
+        if (graphData.length < 2) return;
+
+        const maxCount = GRID_SIZE * GRID_SIZE;
+
+        function plotLine(data, key, color, lineWidth = 2) {
+            if (!data || data.length < 2) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            const len = data.length;
+            data.forEach((d, i) => {
+                const x = (i / (len - 1)) * w;
+                const y = h - (d[key] / maxCount) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        plotLine(graphData, 'algae', SPECIES_COLORS[SPECIES.ALGAE], 2);
+        plotLine(graphData, 'mussel', SPECIES_COLORS[SPECIES.MUSSEL], 2);
+        plotLine(graphData, 'barnacle', SPECIES_COLORS[SPECIES.BARNACLE], 2);
+        plotLine(graphData, 'snail', SPECIES_COLORS[SPECIES.SNAIL], 2);
+        plotLine(graphData, 'starfish', SPECIES_COLORS[SPECIES.STARFISH], 2);
+    }
+
+    function drawSpeciesGraph() {
+        const ctx = speciesCtx;
+        const w = speciesCanvas.width;
+        const h = speciesCanvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#fdfdfd';
+        ctx.fillRect(0, 0, w, h);
+
+        if (graphData.length < 2) return;
+
+        const maxSpecies = 5;
+
+        function plotLine(data, key, color, lineWidth = 2, dash = []) {
+            if (!data || data.length < 2) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.setLineDash(dash);
+            ctx.beginPath();
+            const len = data.length;
+            data.forEach((d, i) => {
+                const x = (i / (len - 1)) * w;
+                const y = h - (d[key] / maxSpecies) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        plotLine(graphData, 'speciesCount', '#1f77b4', 3);
+
+        if (savedGraphData && savedGraphData.length > 1) {
+            plotLine(savedGraphData, 'speciesCount', '#1f77b4', 2, [5, 3]);
+        }
+    }
+
+    function drawFoodWeb() {
+        const ctx = foodwebCtx;
+        const w = foodwebCanvas.width;
+        const h = foodwebCanvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#fdfdfd';
+        ctx.fillRect(0, 0, w, h);
+
+        const organisms = [
+            { name: '藻類', x: w * 0.15, y: h * 0.7, color: SPECIES_COLORS[SPECIES.ALGAE] },
+            { name: 'イガイ', x: w * 0.4, y: h * 0.4, color: SPECIES_COLORS[SPECIES.MUSSEL] },
+            { name: 'フジツボ', x: w * 0.65, y: h * 0.4, color: SPECIES_COLORS[SPECIES.BARNACLE] },
+            { name: '巻貝', x: w * 0.15, y: h * 0.3, color: SPECIES_COLORS[SPECIES.SNAIL] },
+            { name: 'ヒトデ', x: w * 0.525, y: h * 0.15, color: SPECIES_COLORS[SPECIES.STARFISH] }
+        ];
+
+        function drawArrow(from, to, active = true) {
+            ctx.strokeStyle = active ? '#333' : '#ccc';
+            ctx.fillStyle = active ? '#333' : '#ccc';
+            ctx.lineWidth = active ? 2 : 1;
+            ctx.setLineDash(active ? [] : [3, 3]);
+
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            const arrowLen = 10;
+            ctx.beginPath();
+            ctx.moveTo(to.x, to.y);
+            ctx.lineTo(
+                to.x - arrowLen * Math.cos(angle - Math.PI / 6),
+                to.y - arrowLen * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                to.x - arrowLen * Math.cos(angle + Math.PI / 6),
+                to.y - arrowLen * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+            ctx.setLineDash([]);
+        }
+
+        // (v2からの修正: 巻貝 → フジツボ)
+        drawArrow(organisms[3], organisms[2], isSnailPresent);
+        
+        drawArrow(organisms[4], organisms[1], isKeystonePresent);
+        drawArrow(organisms[4], organisms[2], isKeystonePresent);
+
+        organisms.forEach((org) => {
+            let active = true;
+            if (org.name === 'ヒトデ' && !isKeystonePresent) active = false;
+            if (org.name === '巻貝' && !isSnailPresent) active = false;
+
+            ctx.fillStyle = active ? org.color : '#ddd';
+            ctx.strokeStyle = active ? '#333' : '#999';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.arc(org.x, org.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = active ? '#fff' : '#999';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(org.name, org.x, org.y);
+        });
+    }
+
+    let lastTime = 0;
+    const simulationInterval = 50; // 2倍速（100ms → 50ms）
+    
+    function gameLoop(timestamp) {
+        if (isRunning) {
+            if (!lastTime) lastTime = timestamp;
+            const delta = timestamp - lastTime;
+            if (delta > simulationInterval) {
+                lastTime = timestamp;
+                update();
+                draw();
+                drawPopulationGraph();
+                drawSpeciesGraph();
+            }
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    startStopButton.addEventListener('click', () => {
+        isRunning = !isRunning;
+        if (isRunning) {
+            startStopButton.textContent = '一時停止';
+            startStopButton.classList.add('running');
+            keystoneToggle.disabled = true;
+            snailToggle.disabled = true;
+            lastTime = 0;
+        } else {
+            startStopButton.textContent = '再開';
+            startStopButton.classList.remove('running');
+            keystoneToggle.disabled = false;
+            snailToggle.disabled = false;
+        }
+    });
+
+    resetButton.addEventListener('click', () => {
+        isRunning = false;
+        startStopButton.textContent = 'スタート';
+        startStopButton.classList.remove('running');
+        keystoneToggle.disabled = false;
+        snailToggle.disabled = false;
+        initializeSimulation();
+        resizeCanvas();
+        drawPopulationGraph();
+        drawSpeciesGraph();
+        drawFoodWeb();
+    });
+
+    keystoneToggle.addEventListener('change', () => {
+        isKeystonePresent = keystoneToggle.checked;
+        updateConditionLabel();
+        drawFoodWeb();
+    });
+    
+    snailToggle.addEventListener('change', () => {
+        isSnailPresent = snailToggle.checked;
+        updateConditionLabel();
+        drawFoodWeb();
+    });
+
+    saveGraphButton.addEventListener('click', () => {
+        if (graphData.length < 2) return;
+        savedGraphData = graphData.map(d => ({ ...d }));
+        const star = isKeystonePresent ? 'あり' : '除去';
+        const snail = isSnailPresent ? 'あり' : '除去';
+        savedLabelElement.textContent =
+            `保存した対照区：ヒトデ ${star} ／ 巻貝 ${snail}`;
+        drawSpeciesGraph();
+    });
+
+    clearSavedGraphButton.addEventListener('click', () => {
+        savedGraphData = null;
+        savedLabelElement.textContent = '';
+        drawSpeciesGraph();
+    });
+
+    function resizeCanvas() {
+        const simArea = simCanvas.parentElement;
+        const availableWidth = simArea.clientWidth || simArea.getBoundingClientRect().width || 600;
+        const aspect = 4 / 3;
+
+        const w = availableWidth;
+        const h = w / aspect;
+
+        simCanvas.width = w;
+        simCanvas.height = h;
+        cellWidth = simCanvas.width / GRID_SIZE;
+        cellHeight = simCanvas.height / GRID_SIZE;
+
+        const popParent = popCanvas.parentElement;
+        popCanvas.width = (popParent.clientWidth || 400) - 16;
+        popCanvas.height = 150;
+        
+        const speciesParent = speciesCanvas.parentElement;
+        speciesCanvas.width = (speciesParent.clientWidth || 400) - 16;
+        speciesCanvas.height = 150;
+
+        const foodwebParent = foodwebCanvas.parentElement;
+        foodwebCanvas.width = (foodwebParent.clientWidth || 400);
+        foodwebCanvas.height = 180;
+
+        draw();
+        drawPopulationGraph();
+        drawSpeciesGraph();
+        drawFoodWeb();
+    }
+
+    loadImages().then(() => {
+        imagesLoaded = true;
+        initializeSimulation();
+        resizeCanvas();
+        drawFoodWeb();
+        requestAnimationFrame(gameLoop);
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+</script>
+</body>
+</html>
